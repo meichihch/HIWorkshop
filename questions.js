@@ -28,6 +28,10 @@
           compare: { title: "10 月初問卷：幸福力是⋯⋯", words: S.happinessKeywords },
         },
         {
+          id: "w1-survey-happy", type: "survey-happy", title: "問卷回顧：幸福力",
+          prompt: "你們寫下的幸福力",
+        },
+        {
           id: "w1-imagine", type: "wall", title: "重新想像幸福力／永續",
           prompt: "我們這組對幸福力和永續的想像",
           hint: "各組討論後上傳，可以分成好幾則",
@@ -36,11 +40,10 @@
         },
         {
           id: "w1-empathy", type: "wall", title: "同理：個人經驗的觀察",
-          prompt: "從個人經驗出發，你觀察到什麼？",
-          hint: "從職場、家庭或生活經驗出發。揭曉前，大家只看得到自己送出的內容",
-          placeholder: "我注意到⋯⋯",
+          prompt: "各組觀察到的問題",
+          hint: "每組派一人上傳：從哪個面向出發（我／我們／社會），觀察到什麼問題",
+          placeholder: "面向：⋯⋯\n問題：⋯⋯",
           maxLen: 300,
-          hideUntilReveal: true,
         },
         {
           id: "w1-hmw", type: "wall", title: "定義問題：HMW",
@@ -62,6 +65,10 @@
           source: "w1-hmw",        // 顯示第一場 HMW 的資料
           readonly: true,          // 學生不用作答
           likes: "想解這題",
+        },
+        {
+          id: "w2-survey-ai", type: "survey-ai", title: "問卷回顧：AI 使用",
+          prompt: "你們和 AI 的關係",
         },
       ],
     },
