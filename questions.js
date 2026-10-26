@@ -28,13 +28,6 @@
           compare: { title: "10 月初問卷：幸福力是⋯⋯", words: S.happinessKeywords },
         },
         {
-          id: "w1-imagine", type: "wall", title: "重新想像幸福力／永續",
-          prompt: "我們這組對幸福力和永續的想像",
-          hint: "各組討論後上傳，可以分成好幾則",
-          placeholder: "我們覺得⋯⋯",
-          maxLen: 300,
-        },
-        {
           id: "w1-empathy", type: "wall", title: "同理：個人經驗的觀察",
           prompt: "各組觀察到的問題",
           hint: "每組派一人上傳：從哪個面向出發（我／我們／社會），觀察到什麼問題",
