@@ -46,10 +46,12 @@
   function cloudHtml(pairs, isLive) {
     if (!pairs.length) return `<div class="empty">等待第一個詞出現⋯⋯</div>`;
     const max = Math.max(...pairs.map((p) => p[1]));
+    // 現場的詞多半只出現一次：依出現順序套用固定的大小變化，就算只有兩三個詞也有大有小
+    const VARY = [1, 0.45, 0.75, 0.32, 0.9, 0.6, 0.4, 0.82, 0.52, 0.68];
+    const order = new Map(pairs.map((p, i) => [p[0], i]));
     const sorted = [...pairs].sort((a, b) => hash(a[0]) - hash(b[0]));
     return `<div class="cloud">${sorted.map(([w, c]) => {
-      // 現場的詞多半只出現一次：每個詞再乘上固定的大小變化（0.5–1 倍），畫面才有大有小
-      const vary = isLive ? 0.5 + 0.5 * ((Math.abs(hash(w + "#size")) % 100) / 99) : 1;
+      const vary = isLive ? VARY[order.get(w) % VARY.length] : 1;
       const size = 1.3 + 4.2 * Math.sqrt(c / max) * vary;
       const fresh = isLive && !H.seen.has("w:" + w);
       if (isLive) H.seen.add("w:" + w);
