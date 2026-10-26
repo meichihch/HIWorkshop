@@ -85,7 +85,7 @@
       app.innerHTML = `<form class="card" id="f">${head}
           <div class="field"><label for="t">內容（${esc(S.group)}）</label><textarea class="input" id="t" maxlength="${q.maxLen || 300}" placeholder="${esc(q.placeholder || "")}"></textarea></div>
           <button class="btn" type="submit" id="send">送出</button></form>
-        <section class="wall"><div class="wall-head"><h2 id="listTitle">大家送出的</h2><span class="hint" id="count"></span></div><div class="wall" id="list"></div></section>`;
+        ${q.hostOnly ? "" : `<section class="wall"><div class="wall-head"><h2 id="listTitle">大家送出的</h2><span class="hint" id="count"></span></div><div class="wall" id="list"></div></section>`}`;
       document.getElementById("f").onsubmit = async (e) => {
         e.preventDefault();
         const t = document.getElementById("t"); const v = t.value.trim();
