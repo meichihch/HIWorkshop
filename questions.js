@@ -20,10 +20,6 @@
           prompt: "掃碼報到，選擇你的組別",
         },
         {
-          id: "w1-survey-ai", type: "survey-ai", title: "問卷回顧：AI 使用",
-          prompt: "你們和 AI 的關係",
-        },
-        {
           id: "w1-word", type: "cloud", title: "今天的幸福",
           prompt: "用一個詞，形容你今天的幸福",
           hint: "可以送出好幾個",
@@ -70,6 +66,10 @@
           source: "w1-hmw",        // 顯示第一場 HMW 的資料
           readonly: true,          // 學生不用作答
           likes: "想解這題",
+        },
+        {
+          id: "w2-survey-ai", type: "survey-ai", title: "問卷回顧：AI 使用",
+          prompt: "你們和 AI 的關係",
         },
       ],
     },
