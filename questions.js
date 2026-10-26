@@ -28,14 +28,6 @@
           compare: { title: "10 月初問卷：幸福力是⋯⋯", words: S.happinessKeywords },
         },
         {
-          id: "w1-survey-ai", type: "survey-ai", title: "問卷回顧：AI 使用",
-          prompt: "",
-        },
-        {
-          id: "w1-survey-happy", type: "survey-happy", title: "問卷回顧：幸福力",
-          prompt: "你們寫下的幸福力",
-        },
-        {
           id: "w1-imagine", type: "wall", title: "重新想像幸福力／永續",
           prompt: "我們這組對幸福力和永續的想像",
           hint: "各組討論後上傳，可以分成好幾則",
