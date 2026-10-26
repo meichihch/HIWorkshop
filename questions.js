@@ -38,10 +38,10 @@
         {
           id: "w1-hmw", type: "wall", title: "定義問題：HMW",
           prompt: "我們可以如何⋯⋯？",
-          hint: "上傳你們組的 HMW 問句，再幫你最想解的題目按讚",
+          hint: "組內討論後，上傳你們組選定的 HMW 問句",
           placeholder: "我們可以如何⋯⋯",
           maxLen: 150,
-          likes: "想解這題",
+          hideUntilReveal: true,
         },
       ],
     },
@@ -54,7 +54,6 @@
           prompt: "上次各組的 HMW",
           source: "w1-hmw",        // 顯示第一場 HMW 的資料
           readonly: true,          // 學生不用作答
-          likes: "想解這題",
         },
         {
           id: "w2-survey-ai", type: "survey-ai", title: "問卷回顧：AI 使用",
