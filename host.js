@@ -48,7 +48,9 @@
     const max = Math.max(...pairs.map((p) => p[1]));
     const sorted = [...pairs].sort((a, b) => hash(a[0]) - hash(b[0]));
     return `<div class="cloud">${sorted.map(([w, c]) => {
-      const size = 1.3 + 4.2 * Math.sqrt(c / max);
+      // 現場的詞多半只出現一次：每個詞再乘上固定的大小變化（0.5–1 倍），畫面才有大有小
+      const vary = isLive ? 0.5 + 0.5 * ((Math.abs(hash(w + "#size")) % 100) / 99) : 1;
+      const size = 1.3 + 4.2 * Math.sqrt(c / max) * vary;
       const fresh = isLive && !H.seen.has("w:" + w);
       if (isLive) H.seen.add("w:" + w);
       return `<span class="w${Math.abs(hash(w)) % 6}" style="font-size:${size.toFixed(2)}rem;${fresh ? "" : "animation:none"}" title="${c}">${esc(w)}</span>`;
