@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>幸福力互動牆・投影</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chiron+GoRound+TC:wght@200..900&display=swap">
+<link rel="stylesheet" href="style.css">
+<style>
+  html, body { height: 100%; }
+  body { display: grid; grid-template-rows: auto 1fr auto; overflow: hidden; font-size: clamp(14px, 1.05vw, 22px); }
+  .top { display: flex; align-items: center; gap: 14px; padding: 18px 32px 6px; }
+  .top .event { font-family: var(--display); font-weight: 700; font-size: 1.15rem; }
+  .top .q-title { color: var(--muted); font-weight: 600; letter-spacing: .04em; }
+  .top .right { margin-left: auto; display: flex; align-items: center; gap: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .count b { font-size: 1.6rem; color: var(--ink); font-weight: 700; }
+  .live-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
+  .live-dot.on { background: var(--leaf); box-shadow: 0 0 0 4px color-mix(in srgb, var(--leaf) 25%, transparent); }
+
+  .stage { display: grid; grid-template-columns: 1fr auto; gap: 28px; padding: 8px 32px 16px; min-height: 0; }
+  .main { display: grid; grid-template-rows: auto 1fr; gap: 18px; min-height: 0; min-width: 0; }
+  .prompt { font-family: var(--display); font-weight: 700; letter-spacing: -.01em; font-size: clamp(2rem, 3.4vw, 4.2rem); line-height: 1.25; margin: 0; white-space: pre-line; text-wrap: balance; }
+  .viz { min-height: 0; overflow: auto; position: relative; scrollbar-width: thin; }
+
+  .qr { width: clamp(180px, 17vw, 340px); border-radius: 22px; padding: 18px; display: grid; gap: 10px; align-content: start; text-align: center; align-self: start; }
+  .qr #qrcode { background: #fff; border-radius: 12px; padding: 8px; }
+  .qr #qrcode { aspect-ratio: 1; width: 100%; display: grid; place-items: center; }
+  .qr #qrcode img, .qr #qrcode canvas { width: 100% !important; height: auto !important; image-rendering: pixelated; }
+  .qr .cta { font-size: 1.2rem; font-weight: 700; }
+  .qr .url { font-size: .78rem; color: var(--muted); word-break: break-all; }
+  body.qr-small .qr { width: clamp(110px, 9vw, 180px); padding: 10px; } body.qr-small .qr .url { display: none; } body.qr-small .qr .cta { font-size: .95rem; }
+  body.qr-off .qr { display: none; }
+
+  /* 比較：左右兩欄 */
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; height: 100%; }
+  .panel { border-radius: 22px; padding: 22px 26px; display: grid; grid-template-rows: auto 1fr; gap: 12px; min-height: 0; min-width: 0; overflow: auto; }
+  .panel.then { background: rgba(255,255,255,.4); }
+  .panel h3 { margin: 0; font-size: .95rem; letter-spacing: .06em; color: var(--muted); }
+  .insight { font-weight: 700; font-size: 1.5rem; margin-top: 10px; color: var(--forest); }
+  .solo { border-radius: 22px; padding: 26px 30px; height: 100%; overflow: auto; }
+
+  .walls { columns: 4 260px; column-gap: 16px; }
+  .walls .note { margin-bottom: 16px; font-size: 1.3rem; line-height: 1.5; }
+  .walls .note .meta { font-size: .8rem; }
+  .walls .note .hide { position: absolute; top: 6px; right: 8px; border: 0; background: var(--bg); border-radius: 999px; font-size: .72rem; padding: 2px 8px; opacity: 0; transition: opacity .2s; }
+  .walls .note:hover .hide { opacity: 1; }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .walls.kinds { columns: auto; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0,1fr); gap: 16px; }
+  .kind-col h3 { margin: 0 0 10px; font-size: 1.4rem; }
+
+  .poll-bars .bar-label { font-size: 1.35rem; }
+  .poll-bars .bar-track { height: 38px; }
+  .poll-bars { gap: 22px; }
+
+  .survey { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 20px; height: 100%; }
+  .survey .panel { grid-template-rows: auto auto; align-content: start; }
+  .hero-num { font-family: var(--display); font-weight: 900; font-size: clamp(4rem, 8vw, 9rem); line-height: 1; color: var(--forest); }
+  .hero-num small { font-size: .35em; color: var(--muted); }
+  .rating { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; }
+  .scale { grid-column: 1 / -1; height: 14px; border-radius: 999px; background: rgba(255,255,255,.55); position: relative; }
+  .scale::after { content: ""; position: absolute; inset: 0; border-radius: inherit; background: repeating-linear-gradient(90deg, transparent 0 calc(25% - 2px), var(--bg) calc(25% - 2px) 25%); }
+  .scale i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--leaf), var(--lime)); }
+  .quotes { columns: 3 260px; column-gap: 16px; }
+  .quotes .note { margin-bottom: 16px; font-size: 1.3rem; line-height: 1.45; animation-delay: calc(var(--i) * 60ms); }
+
+  /* 控制列 */
+  .bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 32px 16px; border-top: 1px solid var(--glass-line); background: rgba(255,255,255,.45); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); font-size: 14px; }
+  .bar select { border: 1px solid var(--glass-line); border-radius: 999px; padding: .35em .8em; background: rgba(255,255,255,.7); max-width: 340px; }
+  .bar .sep { width: 1px; height: 22px; background: var(--line); margin: 0 4px; }
+  .bar .spacer { flex: 1; }
+  .bar .btn.small[aria-pressed="true"] { background: var(--accent); color: #fff; box-shadow: none; }
+  body.present .bar { opacity: 0; transition: opacity .3s; }
+  body.present .bar:hover, body.present .bar:focus-within { opacity: 1; }
+  .pin { display: flex; gap: 6px; align-items: center; }
+  .pin input { width: 120px; background: rgba(255,255,255,.7); border: 1px solid var(--glass-line); border-radius: 999px; padding: .35em .8em; }
+  .modal { position: fixed; inset: 0; background: rgba(28,42,51,.45); display: grid; place-items: center; z-index: 40; padding: 24px; }
+  .modal .box { background: #fff; border-radius: 18px; padding: 22px; width: min(720px, 100%); display: grid; gap: 12px; }
+  .modal textarea { min-height: 300px; font-size: 13px; }
+
+  /* 有組別篩選列時，下面的內容自動縮到剩下的高度 */
+  .viz { display: flex; flex-direction: column; }
+  .viz > .filters { flex: none; }
+  .viz > .split, .viz > .solo { flex: 1; min-height: 0; height: auto; }
+
+  /* 報到名單：每組一張卡 */
+  .roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; align-content: start; }
+  .roster-group { border-radius: 22px; padding: 18px 20px; position: relative; overflow: hidden; }
+  .roster-group::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--c); }
+  .roster-group h3 { margin: 0 0 10px; font-size: 1.4rem; display: flex; justify-content: space-between; align-items: baseline; }
+  .roster-group h3 span { font-size: .9rem; color: var(--muted); font-weight: 600; }
+  .roster-group ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+  .roster-group li { background: rgba(255,255,255,.8); border-radius: 999px; padding: .25em .9em; font-size: 1.15rem; animation: pop .45s cubic-bezier(.2,1.3,.4,1) both; }
+
+  /* 揭曉前：只顯示各組送出幾則 */
+  .sealed { display: grid; align-content: center; justify-items: center; gap: 28px; text-align: center; }
+  .sealed-msg { font-size: 1.6rem; font-weight: 700; color: var(--forest); }
+  .sealed-groups { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; }
+  .sealed-g { width: 140px; padding: 18px 10px; border-radius: 20px; background: rgba(255,255,255,.75); border-top: 6px solid var(--c); display: grid; gap: 2px; }
+  .sealed-g b { font-size: 2.8rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .sealed-g span { color: var(--muted); font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <span class="q-title" id="qTitle"></span>
+    <div class="right"><span class="count" id="count"></span><span class="live-dot" id="dot" title="連線狀態"></span></div>
+  </div>
+
+  <div class="stage">
+    <div class="main">
+      <h1 class="prompt" id="prompt"></h1>
+      <div class="viz" id="viz"></div>
+    </div>
+    <aside class="qr glass">
+      <div class="cta">掃碼參與</div>
+      <div id="qrcode"></div>
+      <div class="url" id="url"></div>
+    </aside>
+  </div>
+
+  <div class="bar" id="bar"></div>
+
+<script src="lib/qrcode.min.js"></script>
+<script src="lib/supabase.js"></script>
+<script src="config.js"></script>
+<script src="survey.js"></script>
+<script src="questions.js"></script>
+<script src="backend.js"></script>
+<script src="host.js"></script>
+</body>
+</html>
