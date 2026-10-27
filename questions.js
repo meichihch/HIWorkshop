@@ -34,6 +34,7 @@
           placeholder: "面向：⋯⋯\n問題：⋯⋯\n感受：⋯⋯",
           maxLen: 300,
           hostOnly: true,          // 學生手機不顯示大家送出的內容，只在投影看
+          hideUntilReveal: true,
         },
         {
           id: "w1-hmw", type: "wall", title: "定義問題：HMW",
