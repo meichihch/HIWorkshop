@@ -89,14 +89,12 @@
       rows.forEach((r) => latest.set(r.name, r));
       const people = [...latest.values()];
       $("count").innerHTML = `<b>${people.length}</b> 人報到`;
-      const gs = groupsIn(people);
-      viz.innerHTML = gs.length
-        ? `<div class="roster">${gs.map((g) => {
-            const names = people.filter((p) => p.tag === g).sort((a, b) => a.created_at.localeCompare(b.created_at));
-            return `<section class="roster-group glass ${groupClass(g)}"><h3>${esc(g)}<span>${names.length} 人</span></h3>
-              <ul>${names.map((p) => { const fresh = !H.seen.has("p:" + p.name); H.seen.add("p:" + p.name); return `<li style="${fresh ? "" : "animation:none"}">${esc(p.name)}</li>`; }).join("")}</ul></section>`;
-          }).join("")}</div>`
-        : `<div class="solo glass"><div class="empty">掃右邊的 QR code 報到</div></div>`;
+      // 6 組永遠都列出來，還沒有人的組也先排好位置
+      viz.innerHTML = `<div class="roster">${window.GROUPS.map((g) => {
+          const names = people.filter((p) => p.tag === g).sort((a, b) => a.created_at.localeCompare(b.created_at));
+          return `<section class="roster-group glass ${groupClass(g)}"><h3>${esc(g)}<span>${names.length} 人</span></h3>
+            <ul>${names.map((p) => { const fresh = !H.seen.has("p:" + p.name); H.seen.add("p:" + p.name); return `<li style="${fresh ? "" : "animation:none"}">${esc(p.name)}</li>`; }).join("")}</ul></section>`;
+        }).join("")}</div>`;
     } else if (q.type === "survey-ai") {
       $("count").innerHTML = "";
       viz.innerHTML = surveyAi(); growBars(viz);
@@ -117,9 +115,9 @@
     } else if (q.type === "wall") {
       $("count").innerHTML = `<b>${new Set(rows.map((r) => r.tag)).size}</b> 組・${rows.length} 則`;
       if (q.hideUntilReveal && !H.state.reveal) {
-        const all = window.GROUPS.map((g) => ({ g, n: rows.filter((r) => r.tag === g).length })).filter((x) => x.n);
+        const all = window.GROUPS.map((g) => ({ g, n: rows.filter((r) => r.tag === g).length }));   // 6 組都列出來，還沒送的是 0
         viz.innerHTML = `<div class="solo glass sealed"><div class="sealed-msg">內容先保密，揭曉時再一起看</div>
-          ${all.length ? `<div class="sealed-groups">${all.map((x) => `<div class="sealed-g ${groupClass(x.g)}"><b>${x.n}</b><span>${esc(x.g)}</span></div>`).join("")}</div>` : `<div class="empty">等待各組送出</div>`}</div>`;
+          <div class="sealed-groups">${all.map((x) => `<div class="sealed-g ${groupClass(x.g)}"><b>${x.n}</b><span>${esc(x.g)}</span></div>`).join("")}</div></div>`;
       } else {
         const list = rows.filter((r) => !H.filter || r.tag === H.filter);
         list.sort((a, b) => H.sort === "likes" ? (b.likes || 0) - (a.likes || 0) || b.created_at.localeCompare(a.created_at) : b.created_at.localeCompare(a.created_at));

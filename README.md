@@ -118,6 +118,6 @@
 ## 常見調整
 
 - **改題目**：編輯 `questions.js`，每一題的 `prompt` 是投影上的大字，`hint` 是學生手機上的說明
-- **改分組數**：`questions.js` 最上面的 `GROUPS`（目前列出第 1–6 組，投影只顯示有人選的組別）
+- **改分組數**：`questions.js` 最上面的 `GROUPS`（目前列出第 1–6 組，投影的報到名單和各組則數永遠顯示 6 組）
 - **改標題**：`config.js` 的 `EVENT_TITLE`
 - 改完重新上傳到 GitHub（Add file → Upload files 會直接覆蓋），大約 1 分鐘後生效
