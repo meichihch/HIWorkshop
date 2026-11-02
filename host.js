@@ -144,20 +144,43 @@
     let box = $("mdView");
     if (!H.mdOpen || !files.some((r) => r.tag === H.mdOpen)) { if (box) box.remove(); H.mdOpen = files.some((r) => r.tag === H.mdOpen) ? H.mdOpen : null; return; }
     const i = files.findIndex((r) => r.tag === H.mdOpen), r = files[i];
+    const gi = window.GROUPS.indexOf(r.tag) + 1;
+    const fbUrl = studentUrl + "?fb=" + gi;
     if (!box) { box = document.createElement("div"); box.id = "mdView"; box.className = "md-view"; document.body.appendChild(box); }
-    box.innerHTML = `<div class="md-sheet glass">
-        <div class="md-head"><span class="tag ${groupClass(r.tag)}">${esc(r.tag)}</span><span class="hint">${esc(r.choice || "")}</span>
-          <span class="spacer"></span>
-          <button class="btn small ghost" data-mdnav="-1" ${i ? "" : "disabled"}>◀ 上一組</button>
-          <button class="btn small ghost" data-mdnav="1" ${i < files.length - 1 ? "" : "disabled"}>下一組 ▶</button>
-          <button class="btn small" data-mdclose>關閉</button></div>
-        <div class="md-body big">${renderMd(composeMd(parseMdRow(r)))}</div></div>`;
+    if (box.dataset.tag !== r.tag) {
+      box.dataset.tag = r.tag;
+      box.innerHTML = `<div class="md-sheet glass">
+          <div class="md-head"><span class="tag ${groupClass(r.tag)}">${esc(r.tag)}</span><span class="hint">${esc(r.choice || "")}</span>
+            <span class="spacer"></span>
+            <button class="btn small ghost" data-mdnav="-1" ${i ? "" : "disabled"}>◀ 上一組</button>
+            <button class="btn small ghost" data-mdnav="1" ${i < files.length - 1 ? "" : "disabled"}>下一組 ▶</button>
+            <button class="btn small" data-mdclose>關閉</button></div>
+          <div class="md-main">
+            <div class="md-body big" id="mdBody"></div>
+            <aside class="fb-panel">
+              <div class="fb-qr"><div class="fb-title">掃碼給 ${esc(r.tag)} 回饋</div><div id="fbQr"></div></div>
+              <div class="fb-list" id="fbList"></div>
+            </aside>
+          </div></div>`;
+      try { new QRCode($("fbQr"), { text: fbUrl, width: 220, height: 220, colorDark: "#17231f", colorLight: "#ffffff", correctLevel: QRCode.CorrectLevel.M }); } catch {}
+    }
+    $("mdBody").innerHTML = renderMd(composeMd(parseMdRow(r)));
+    const fb = (H.fbRows || []).filter((x) => x.choice === r.tag && !x.hidden).sort((a, b) => b.created_at.localeCompare(a.created_at));
+    $("fbList").innerHTML = fb.length
+      ? fb.map((x) => { const fresh = !H.seen.has("fb:" + x.id); H.seen.add("fb:" + x.id);
+          return `<article class="note ${groupClass(x.tag)}" style="${fresh ? "" : "animation:none"}">
+            ${H.unlocked ? `<button class="hide" data-hide="${x.id}">隱藏</button>` : ""}
+            <div class="body">${esc(x.body)}</div>
+            <div class="meta">${x.tag ? `<span class="tag">${esc(x.tag)}</span>` : ""}</div></article>`; }).join("")
+      : `<div class="empty">等待其他組的回饋</div>`;
     box.dataset.files = JSON.stringify(files.map((f) => f.tag));
   }
   document.addEventListener("click", (e) => {
     const open = e.target.closest("[data-md]");
     if (open) { H.mdOpen = open.dataset.md; render(); return; }
     if (e.target.closest("[data-mdclose]")) { H.mdOpen = null; render(); return; }
+    const hb = e.target.closest("#mdView [data-hide]");
+    if (hb && H.unlocked) { Live.hostHide(H.pin, hb.dataset.hide, true).then(loadRows).catch((err) => { console.error(err); toast("隱藏失敗"); }); return; }
     const nav = e.target.closest("[data-mdnav]");
     if (nav) { mdStep(+nav.dataset.mdnav); }
   });
@@ -285,8 +308,8 @@
       const cell = (v) => { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
       const lines = all.map((r) => {
         const q = findQuestion(r.q);
-        const w = r.q === CHECKIN_Q ? "" : q ? (q.workshop === "w1" ? "第一場" : "第二場") : "";
-        const title = r.q === CHECKIN_Q ? "報到" : q ? q.prompt.replace(/\n/g, " ") : r.q;
+        const w = r.q === CHECKIN_Q ? "" : r.q === FEEDBACK_Q ? "第二場" : q ? (q.workshop === "w1" ? "第一場" : "第二場") : "";
+        const title = r.q === CHECKIN_Q ? "報到" : r.q === FEEDBACK_Q ? `展示回饋：給${r.choice || ""}` : q ? q.prompt.replace(/\n/g, " ") : r.q;
         const body = q && q.type === "md" ? composeMd(parseMdRow(r)) : r.body;
         return [w, title, r.name, r.tag, body, r.likes || 0, r.hidden ? "是" : "", new Date(r.created_at).toLocaleString("zh-TW", { hour12: false })].map(cell).join(",");
       });
@@ -309,7 +332,10 @@
   async function loadState() { try { H.state = await Live.getState(); await applyState(); } catch (err) { console.error(err); $("prompt").textContent = "連不上資料庫，請檢查 config.js"; } }
   async function loadRows() {
     if (!hasData(H.q)) { render(); return; }
-    try { H.rows = await Live.listResponses(keyOf(H.q)); } catch (err) { console.error(err); }
+    try {
+      H.rows = await Live.listResponses(keyOf(H.q));
+      if (H.q.type === "md") H.fbRows = await Live.listResponses(FEEDBACK_Q);
+    } catch (err) { console.error(err); }
     render();
   }
   const refresh = debounce(loadRows, 150);

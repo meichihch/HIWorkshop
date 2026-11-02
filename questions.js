@@ -78,5 +78,6 @@
   window.ALL_QUESTIONS = window.WORKSHOPS.flatMap((w) => w.questions.map((q) => ({ ...q, workshop: w.id })));
   window.findQuestion = (id) => window.ALL_QUESTIONS.find((q) => q.id === id) || null;
   window.dataKey = (q) => (q ? q.source || q.id : null);   // 這一題的資料存在哪個題目代號
-  window.CHECKIN_Q = "checkin";                             // 報到資料共用的代號（兩場通用）
+  window.CHECKIN_Q = "checkin";
+  window.FEEDBACK_Q = "w2-fb";                               // 展示時的回饋（網址 ?fb=組號，choice = 收到回饋的組）                             // 報到資料共用的代號（兩場通用）
 })();

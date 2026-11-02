@@ -1,7 +1,11 @@
 // 學生手機端
 (function () {
   const app = document.getElementById("app");
-  const FIXED_Q = new URLSearchParams(location.search).get("q");
+  const params = new URLSearchParams(location.search);
+  const FIXED_Q = params.get("q");
+  // 網址帶 ?fb=組號 時，是展示時給那一組的回饋頁
+  const FB_TARGET = window.GROUPS[(parseInt(params.get("fb"), 10) || 0) - 1] || null;
+  const FB_Q = FB_TARGET ? { id: FEEDBACK_Q, type: "fb", title: "展示回饋", prompt: `給${FB_TARGET}回饋`, hint: "一句話就好，回饋會即時出現在投影上", maxLen: 100, target: FB_TARGET } : null;
   const who = document.getElementById("who");
   const S = {
     name: store.get("hl-name") || "",
@@ -94,6 +98,19 @@
         if (await submit({ body: v })) t.value = "";
       };
     }
+    if (q.type === "fb") {
+      if (S.group === q.target) return waiting("你們正在報告", "其他組的回饋會出現在投影上");
+      app.innerHTML = `<form class="card" id="f">${head}
+          <div class="field"><label for="t">回饋（${esc(S.group)}）</label><textarea class="input" id="t" maxlength="${q.maxLen}" placeholder="喜歡的地方、建議或問題"></textarea></div>
+          <button class="btn" type="submit">送出</button></form>
+        <section class="wall"><div class="wall-head"><h2>大家給${esc(q.target)}的回饋</h2><span class="hint" id="count"></span></div><div class="wall" id="list"></div></section>`;
+      document.getElementById("f").onsubmit = async (e) => {
+        e.preventDefault();
+        const t = document.getElementById("t"); const v = t.value.trim();
+        if (!v) return toast("請先寫內容");
+        if (await submit({ body: v, choice: q.target })) t.value = "";
+      };
+    }
     if (q.type === "md") {
       S.dirty = false; S.prefilled = false; S.picked = null;
       app.innerHTML = `<form class="card" id="f">${head}
@@ -106,8 +123,7 @@
             <input class="input" type="file" id="file" accept=".md,.markdown,.txt,text/markdown,text/plain">
             <p class="hint" id="curFile"></p></div>
           <div class="md-preview" id="pv" hidden></div>
-          <button class="btn" type="submit" id="send">送出</button></form>
-        <section class="card"><h2 class="sub">你們組目前的版本</h2><div id="mine"></div></section>`;
+          <button class="btn" type="submit" id="send">送出</button></form>`;
       ["obs", "prob"].forEach((id) => document.getElementById(id).addEventListener("input", () => { S.dirty = true; }));
       document.getElementById("file").onchange = async (e) => {
         const f = e.target.files[0]; S.picked = null;
@@ -151,8 +167,17 @@
       if (box) box.innerHTML = mine.length ? `<span class="label">你送出的：</span>` + mine.map((r) => `<span>${esc(r.body)}</span>`).join("") : "";
     }
 
+    if (q.type === "fb") {
+      const list = document.getElementById("list"); if (!list) return;
+      const mine = rows.filter((r) => r.choice === q.target).sort((a, b) => b.created_at.localeCompare(a.created_at));
+      document.getElementById("count").textContent = mine.length ? `${mine.length} 則` : "";
+      list.innerHTML = mine.length ? mine.map((r) => `<article class="note ${groupClass(r.tag)}" style="animation:none"><div class="body">${esc(r.body)}</div>
+          <div class="meta">${r.tag ? `<span class="tag">${esc(r.tag)}</span>` : ""}${r.name === S.name ? "<span>你</span>" : ""}</div></article>`).join("")
+        : `<div class="empty">還沒有回饋，當第一個吧</div>`;
+    }
+
     if (q.type === "md") {
-      const box = document.getElementById("mine"); if (!box) return;
+      if (!document.getElementById("obs")) return;
       const mine = latestByGroup(rows).find((r) => r.tag === S.group);
       S.mineDoc = mine ? parseMdRow(mine) : null;
       // 還沒動過才帶入：已送出過就帶入最新版本，否則帶入第一場同組的內容
@@ -163,10 +188,6 @@
       }
       const cur = document.getElementById("curFile");
       if (cur) cur.textContent = S.mineDoc && S.mineDoc.file ? `目前的檔案：${S.mineDoc.file}（重新選擇會取代）` : "";
-      box.innerHTML = mine
-        ? `<p class="hint">${esc(mine.name)} 送出・${new Date(mine.created_at).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit", hour12: false })}</p>
-           <details><summary>看內容</summary><div class="md-body">${renderMd(composeMd(S.mineDoc))}</div></details>`
-        : `<div class="empty">你們組還沒送出</div>`;
     }
 
     if (q.type === "wall" && !q.readonly) {
@@ -210,13 +231,13 @@
   async function loadState() {
     try { S.state = await Live.getState(); } catch (err) { console.error(err); return; }
     // 網址帶 ?q=題目代號 時，直接打開那一題（不跟著講師切換），例如 ?q=w2-md
-    const q = findQuestion(FIXED_Q) || findQuestion(S.state.current_q);
+    const q = FB_Q || findQuestion(FIXED_Q) || findQuestion(S.state.current_q);
     if (!S.q || !q || q.id !== S.q.id) { S.q = q; S.rows = []; S.prev = null; renderQuestion(); await loadRows(); }
     else renderData();
   }
   async function loadRows() {
     const q = S.q;
-    if (!q || !["cloud", "wall", "md"].includes(q.type) || q.readonly) return;
+    if (!q || !["cloud", "wall", "md", "fb"].includes(q.type) || q.readonly) return;
     try {
       S.rows = await Live.listResponses(dataKey(q));
       if (q.prefill && !S.prev) {
