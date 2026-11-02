@@ -1,6 +1,7 @@
 // 學生手機端
 (function () {
   const app = document.getElementById("app");
+  const FIXED_Q = new URLSearchParams(location.search).get("q");
   const who = document.getElementById("who");
   const S = {
     name: store.get("hl-name") || "",
@@ -208,7 +209,8 @@
   // ---------- 資料 ----------
   async function loadState() {
     try { S.state = await Live.getState(); } catch (err) { console.error(err); return; }
-    const q = findQuestion(S.state.current_q);
+    // 網址帶 ?q=題目代號 時，直接打開那一題（不跟著講師切換），例如 ?q=w2-md
+    const q = findQuestion(FIXED_Q) || findQuestion(S.state.current_q);
     if (!S.q || !q || q.id !== S.q.id) { S.q = q; S.rows = []; S.prev = null; renderQuestion(); await loadRows(); }
     else renderData();
   }
