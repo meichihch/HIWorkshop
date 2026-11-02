@@ -67,14 +67,11 @@
           likes: "想解這題",
         },
         {
-          id: "w2-survey-ai", type: "survey-ai", title: "問卷回顧：AI 使用",
-          prompt: "你們和 AI 的關係",
-        },
-        {
-          id: "w2-md", type: "md", title: "修改觀察與問題",
-          prompt: "各組的觀察與要解決的問題",
-          hint: "每組上傳一份 .md 檔。重新上傳會取代你們組之前的版本。",
+          id: "w2-md", type: "md", title: "觀察、問題與發想概念",
+          prompt: "各組的觀察、問題與發想概念",
+          hint: "你們組上次的觀察與問題已經帶入，可以直接修改。發想概念請上傳一份 .md 檔。重新送出會取代你們組之前的版本。",
           maxChars: 20000,
+          prefill: { obs: "w1-empathy", prob: "w1-hmw" },   // 帶入第一場同組的觀察與問題
         },
       ],
     },

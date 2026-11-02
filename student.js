@@ -94,33 +94,45 @@
       };
     }
     if (q.type === "md") {
+      S.dirty = false; S.prefilled = false; S.picked = null;
       app.innerHTML = `<form class="card" id="f">${head}
-          <div class="field"><label for="file">選擇 .md 檔（${esc(S.group)}）</label>
-            <input class="input" type="file" id="file" accept=".md,.markdown,.txt,text/markdown,text/plain"></div>
+          <p class="md-group">${esc(S.group)}</p>
+          <div class="field"><label for="obs">觀察（上次的內容，可以直接修改）</label>
+            <textarea class="input" id="obs" rows="6" placeholder="面向、現象、感受"></textarea></div>
+          <div class="field"><label for="prob">要解決的問題（上次的內容，可以直接修改）</label>
+            <textarea class="input" id="prob" rows="4" placeholder="我們可以如何⋯⋯？"></textarea></div>
+          <div class="field"><label for="file">發想概念（.md 檔）</label>
+            <input class="input" type="file" id="file" accept=".md,.markdown,.txt,text/markdown,text/plain">
+            <p class="hint" id="curFile"></p></div>
           <div class="md-preview" id="pv" hidden></div>
-          <button class="btn" type="submit" id="send" disabled>上傳</button></form>
+          <button class="btn" type="submit" id="send">送出</button></form>
         <section class="card"><h2 class="sub">你們組目前的版本</h2><div id="mine"></div></section>`;
-      let picked = null;
+      ["obs", "prob"].forEach((id) => document.getElementById(id).addEventListener("input", () => { S.dirty = true; }));
       document.getElementById("file").onchange = async (e) => {
-        const f = e.target.files[0]; picked = null;
-        const pv = document.getElementById("pv"), send = document.getElementById("send");
-        pv.hidden = true; send.disabled = true;
+        const f = e.target.files[0]; S.picked = null;
+        const pv = document.getElementById("pv"); pv.hidden = true;
         if (!f) return;
-        if (!/\.(md|markdown|txt)$/i.test(f.name)) return toast("請選擇 .md 檔");
-        if (f.size > 300000) return toast("檔案太大了");
+        if (!/\.(md|markdown|txt)$/i.test(f.name)) { e.target.value = ""; return toast("請選擇 .md 檔"); }
+        if (f.size > 300000) { e.target.value = ""; return toast("檔案太大了"); }
         const text = await f.text();
-        if (!text.trim()) return toast("檔案是空的");
-        if (text.length > (q.maxChars || 20000)) return toast(`內容太長，請控制在 ${q.maxChars || 20000} 字以內`);
-        picked = { name: f.name.slice(0, 100), text };
-        pv.innerHTML = `<div class="md-file">${esc(picked.name)}</div><div class="md-body">${renderMd(text)}</div>`;
-        pv.hidden = false; send.disabled = false;
+        if (!text.trim()) { e.target.value = ""; return toast("檔案是空的"); }
+        S.picked = { name: f.name.slice(0, 100), text };
+        pv.innerHTML = `<div class="md-file">${esc(S.picked.name)}</div><div class="md-body">${renderMd(text)}</div>`;
+        pv.hidden = false;
       };
       document.getElementById("f").onsubmit = async (e) => {
         e.preventDefault();
-        if (!picked) return toast("請先選擇檔案");
-        if (await submit({ body: picked.text, choice: picked.name })) {
-          picked = null; document.getElementById("file").value = "";
-          document.getElementById("pv").hidden = true; document.getElementById("send").disabled = true;
+        const obs = document.getElementById("obs").value.trim();
+        const prob = document.getElementById("prob").value.trim();
+        const saved = S.mineDoc || {};
+        const md = S.picked ? S.picked.text : saved.md || "";
+        const file = S.picked ? S.picked.name : saved.file || "";
+        if (!obs && !prob && !md) return toast("請先填寫內容");
+        const body = JSON.stringify({ v: 1, obs, prob, md, file });
+        if (body.length > (q.maxChars || 20000)) return toast(`內容太長，請控制在 ${q.maxChars || 20000} 字以內`);
+        if (await submit({ body, choice: file || null })) {
+          S.dirty = false; S.picked = null;
+          document.getElementById("file").value = ""; document.getElementById("pv").hidden = true;
         }
       };
     }
@@ -141,11 +153,19 @@
     if (q.type === "md") {
       const box = document.getElementById("mine"); if (!box) return;
       const mine = latestByGroup(rows).find((r) => r.tag === S.group);
+      S.mineDoc = mine ? parseMdRow(mine) : null;
+      // 還沒動過才帶入：已送出過就帶入最新版本，否則帶入第一場同組的內容
+      if (!S.dirty && (S.mineDoc || S.prev)) {
+        const src = S.mineDoc || S.prev;
+        document.getElementById("obs").value = src.obs || "";
+        document.getElementById("prob").value = src.prob || "";
+      }
+      const cur = document.getElementById("curFile");
+      if (cur) cur.textContent = S.mineDoc && S.mineDoc.file ? `目前的檔案：${S.mineDoc.file}（重新選擇會取代）` : "";
       box.innerHTML = mine
-        ? `<div class="md-file">${esc(mine.choice || "未命名.md")}</div>
-           <p class="hint">${esc(mine.name)} 上傳・${new Date(mine.created_at).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit", hour12: false })}</p>
-           <details><summary>看內容</summary><div class="md-body">${renderMd(mine.body)}</div></details>`
-        : `<div class="empty">你們組還沒上傳</div>`;
+        ? `<p class="hint">${esc(mine.name)} 送出・${new Date(mine.created_at).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit", hour12: false })}</p>
+           <details><summary>看內容</summary><div class="md-body">${renderMd(composeMd(S.mineDoc))}</div></details>`
+        : `<div class="empty">你們組還沒送出</div>`;
     }
 
     if (q.type === "wall" && !q.readonly) {
@@ -189,7 +209,7 @@
   async function loadState() {
     try { S.state = await Live.getState(); } catch (err) { console.error(err); return; }
     const q = findQuestion(S.state.current_q);
-    if (!S.q || !q || q.id !== S.q.id) { S.q = q; S.rows = []; renderQuestion(); await loadRows(); }
+    if (!S.q || !q || q.id !== S.q.id) { S.q = q; S.rows = []; S.prev = null; renderQuestion(); await loadRows(); }
     else renderData();
   }
   async function loadRows() {
@@ -197,6 +217,10 @@
     if (!q || !["cloud", "wall", "md"].includes(q.type) || q.readonly) return;
     try {
       S.rows = await Live.listResponses(dataKey(q));
+      if (q.prefill && !S.prev) {
+        const pick = async (key) => (await Live.listResponses(key)).filter((r) => r.tag === S.group && !r.hidden).map((r) => r.body).join("\n\n");
+        S.prev = { obs: await pick(q.prefill.obs), prob: await pick(q.prefill.prob) };
+      }
       if (q.likes) (await Live.myLikes(S.name)).forEach((id) => S.liked.add(id));
     } catch (err) { console.error(err); }
     renderData();

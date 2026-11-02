@@ -130,7 +130,7 @@
       viz.innerHTML = files.length
         ? `<div class="md-grid">${files.map((r) => `<button type="button" class="md-card glass ${groupClass(r.tag)}" data-md="${esc(r.tag)}">
               <span class="tag">${esc(r.tag)}</span>
-              <strong>${esc(mdTitle(r.body) || r.choice || "")}</strong>
+              <strong>${esc(mdTitle(parseMdRow(r).prob) || mdTitle(parseMdRow(r).md) || "")}</strong>
               <span class="hint">${esc(r.choice || "")}・${fmt(r.created_at)}</span>
             </button>`).join("")}</div>`
         : `<div class="solo glass"><div class="empty">等待各組上傳 .md 檔</div></div>`;
@@ -151,7 +151,7 @@
           <button class="btn small ghost" data-mdnav="-1" ${i ? "" : "disabled"}>◀ 上一組</button>
           <button class="btn small ghost" data-mdnav="1" ${i < files.length - 1 ? "" : "disabled"}>下一組 ▶</button>
           <button class="btn small" data-mdclose>關閉</button></div>
-        <div class="md-body big">${renderMd(r.body)}</div></div>`;
+        <div class="md-body big">${renderMd(composeMd(parseMdRow(r)))}</div></div>`;
     box.dataset.files = JSON.stringify(files.map((f) => f.tag));
   }
   document.addEventListener("click", (e) => {
@@ -287,7 +287,8 @@
         const q = findQuestion(r.q);
         const w = r.q === CHECKIN_Q ? "" : q ? (q.workshop === "w1" ? "第一場" : "第二場") : "";
         const title = r.q === CHECKIN_Q ? "報到" : q ? q.prompt.replace(/\n/g, " ") : r.q;
-        return [w, title, r.name, r.tag, r.body, r.likes || 0, r.hidden ? "是" : "", new Date(r.created_at).toLocaleString("zh-TW", { hour12: false })].map(cell).join(",");
+        const body = q && q.type === "md" ? composeMd(parseMdRow(r)) : r.body;
+        return [w, title, r.name, r.tag, body, r.likes || 0, r.hidden ? "是" : "", new Date(r.created_at).toLocaleString("zh-TW", { hour12: false })].map(cell).join(",");
       });
       const blob = new Blob(["﻿" + [head.join(","), ...lines].join("\r\n")], { type: "text/csv;charset=utf-8" });
       const a = document.createElement("a");

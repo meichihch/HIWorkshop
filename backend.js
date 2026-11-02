@@ -113,6 +113,16 @@
     rows.forEach((r) => { const cur = m.get(r.tag); if (!cur || r.created_at > cur.created_at) m.set(r.tag, r); });
     return window.GROUPS.filter((g) => m.has(g)).map((g) => m.get(g));
   };
+  // 「觀察、問題與發想概念」存成 JSON：{ v, obs, prob, md, file }；舊資料是純 .md 文字
+  window.parseMdRow = (r) => {
+    try { const o = JSON.parse(r.body); if (o && o.v === 1) return { obs: o.obs || "", prob: o.prob || "", md: o.md || "", file: o.file || r.choice || "" }; } catch {}
+    return { obs: "", prob: "", md: r.body || "", file: r.choice || "" };
+  };
+  window.composeMd = (d) => [
+    d.obs ? `## 觀察\n\n${d.obs}` : "",
+    d.prob ? `## 要解決的問題\n\n${d.prob}` : "",
+    d.md ? `## 發想概念\n\n${d.md}` : "",
+  ].filter(Boolean).join("\n\n");
   window.mdTitle = (text) => { const l = String(text || "").split(/\r?\n/).map((x) => x.trim()).find((x) => x); return l ? l.replace(/^#+\s*/, "").slice(0, 60) : ""; };
   window.wordKey = (s) => String(s || "").trim().replace(/\s+/g, " ").toLowerCase();
 })();
