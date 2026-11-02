@@ -100,5 +100,19 @@
     set(k, v) { try { localStorage.setItem(k, v); } catch {} },
   };
   window.debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+  // Markdown 轉成安全的 HTML（lib/marked.min.js + lib/purify.min.js）
+  window.renderMd = (text) => {
+    try {
+      if (window.marked && window.DOMPurify) return DOMPurify.sanitize(marked.parse(String(text || ""), { gfm: true, breaks: true }));
+    } catch (err) { console.error(err); }
+    return `<pre style="white-space:pre-wrap">${esc(text)}</pre>`;
+  };
+  // 每組只取最新上傳的一份
+  window.latestByGroup = (rows) => {
+    const m = new Map();
+    rows.forEach((r) => { const cur = m.get(r.tag); if (!cur || r.created_at > cur.created_at) m.set(r.tag, r); });
+    return window.GROUPS.filter((g) => m.has(g)).map((g) => m.get(g));
+  };
+  window.mdTitle = (text) => { const l = String(text || "").split(/\r?\n/).map((x) => x.trim()).find((x) => x); return l ? l.replace(/^#+\s*/, "").slice(0, 60) : ""; };
   window.wordKey = (s) => String(s || "").trim().replace(/\s+/g, " ").toLowerCase();
 })();

@@ -104,3 +104,30 @@ textarea.input { min-height: 110px; resize: vertical; }
 
 .empty { color: var(--muted); text-align: center; padding: 40px 16px; }
 .toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--forest); color: #fff; padding: .6em 1.2em; border-radius: 999px; font-size: .92rem; z-index: 50; animation: pop .3s both; }
+
+/* .md 上傳與投影 */
+.sub { font-size: 1rem; margin: 0 0 8px; }
+.md-file { font-weight: 700; color: var(--forest); word-break: break-all; }
+.md-preview { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: rgba(255, 255, 255, .85); max-height: 50vh; overflow: auto; display: grid; gap: 8px; }
+.md-body { line-height: 1.75; word-break: break-word; }
+.md-body > :first-child { margin-top: 0; }
+.md-body h1, .md-body h2, .md-body h3 { font-family: var(--display); line-height: 1.3; margin: 1.1em 0 .4em; }
+.md-body h1 { font-size: 1.5em; } .md-body h2 { font-size: 1.25em; } .md-body h3 { font-size: 1.08em; }
+.md-body ul, .md-body ol { padding-left: 1.4em; }
+.md-body blockquote { margin: .8em 0; padding: .4em 1em; border-left: 4px solid var(--leaf); background: rgba(255, 255, 255, .6); border-radius: 0 10px 10px 0; }
+.md-body table { border-collapse: collapse; width: 100%; display: block; overflow-x: auto; }
+.md-body th, .md-body td { border: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: top; }
+.md-body code { background: rgba(23, 35, 31, .07); border-radius: 6px; padding: .1em .35em; }
+.md-body pre { background: rgba(23, 35, 31, .06); border-radius: 10px; padding: 10px 12px; overflow-x: auto; }
+.md-body img { max-width: 100%; }
+details summary { cursor: pointer; color: var(--forest); font-weight: 600; margin-top: 6px; }
+.md-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.md-card { text-align: left; display: grid; gap: 8px; padding: 20px 22px; border-radius: var(--radius); border-top: 6px solid var(--c, var(--forest)); font-size: 1.1rem; }
+.md-card strong { font-family: var(--display); font-size: 1.3rem; line-height: 1.35; }
+.md-card .tag, .md-head .tag { justify-self: start; background: color-mix(in srgb, var(--c, var(--line)) 22%, #fff); padding: 2px 12px; border-radius: 999px; font-weight: 700; font-size: .9rem; }
+.md-card:hover { transform: translateY(-2px); }
+.md-view { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 3vh 3vw; background: rgba(23, 35, 31, .25); }
+.md-sheet { width: min(1200px, 100%); max-height: 94vh; display: flex; flex-direction: column; border-radius: 24px; background: rgba(255, 255, 255, .92); }
+.md-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 16px 24px; border-bottom: 1px solid var(--line); }
+.md-head .spacer { flex: 1; }
+.md-body.big { overflow-y: auto; padding: 24px 40px 40px; font-size: 1.45rem; }

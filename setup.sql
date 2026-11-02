@@ -9,7 +9,7 @@ create table if not exists public.responses (
   id         uuid primary key default gen_random_uuid(),
   q          text not null check (char_length(q) <= 40),          -- 題目代號
   name       text not null check (char_length(name) between 1 and 30),
-  body       text check (char_length(body) <= 600),               -- 文字內容
+  body       text check (char_length(body) <= 20000),             -- 文字內容（.md 檔最多 2 萬字）
   choice     text check (char_length(choice) <= 120),             -- 投票選項／回饋類型
   tag        text check (char_length(tag) <= 40),                 -- 組別
   photo      text check (char_length(photo) <= 600),              -- 照片網址
@@ -19,6 +19,10 @@ create table if not exists public.responses (
   created_at timestamptz not null default now()
 );
 create index if not exists responses_q_idx on public.responses (q, created_at);
+
+-- 已經建好資料表的話，用這兩行把文字上限放寬到 2 萬字（給 .md 上傳用）
+alter table public.responses drop constraint if exists responses_body_check;
+alter table public.responses add constraint responses_body_check check (char_length(body) <= 20000);
 
 -- 2. 按讚（同一個名字對同一則只能按一次）-------------------------------
 create table if not exists public.likes (

@@ -14,6 +14,7 @@
     qr: store.get("hl-qr") || "big",
     present: false,
     clearArm: false,
+    mdOpen: null,   // 正在投影的組別
   };
 
   // ---------- QR code ----------
@@ -30,7 +31,7 @@
   const hash = (s) => { let h = 0; for (const c of s) h = (h * 31 + c.codePointAt(0)) | 0; return h; };
   const groupsIn = (rows) => window.GROUPS.filter((g) => rows.some((r) => r.tag === g));   // 只列出有人的組別
   const keyOf = (q) => (q && q.type === "checkin" ? CHECKIN_Q : dataKey(q));
-  const hasData = (q) => q && ["checkin", "cloud", "wall"].includes(q.type);
+  const hasData = (q) => q && ["checkin", "cloud", "wall", "md"].includes(q.type);
 
   // ---------- 視覺化 ----------
   function barsHtml(data, total, cls = "") {
@@ -46,13 +47,9 @@
   function cloudHtml(pairs, isLive) {
     if (!pairs.length) return `<div class="empty">等待第一個詞出現⋯⋯</div>`;
     const max = Math.max(...pairs.map((p) => p[1]));
-    // 現場的詞多半只出現一次：依出現順序套用固定的大小變化，就算只有兩三個詞也有大有小
-    const VARY = [1, 0.45, 0.75, 0.32, 0.9, 0.6, 0.4, 0.82, 0.52, 0.68];
-    const order = new Map(pairs.map((p, i) => [p[0], i]));
     const sorted = [...pairs].sort((a, b) => hash(a[0]) - hash(b[0]));
     return `<div class="cloud">${sorted.map(([w, c]) => {
-      const vary = isLive ? VARY[order.get(w) % VARY.length] : 1;
-      const size = 1.3 + 4.2 * Math.sqrt(c / max) * vary;
+      const size = 1.3 + 4.2 * Math.sqrt(c / max);
       const fresh = isLive && !H.seen.has("w:" + w);
       if (isLive) H.seen.add("w:" + w);
       return `<span class="w${Math.abs(hash(w)) % 6}" style="font-size:${size.toFixed(2)}rem;${fresh ? "" : "animation:none"}" title="${c}">${esc(w)}</span>`;
@@ -89,12 +86,14 @@
       rows.forEach((r) => latest.set(r.name, r));
       const people = [...latest.values()];
       $("count").innerHTML = `<b>${people.length}</b> 人報到`;
-      // 6 組永遠都列出來，還沒有人的組也先排好位置
-      viz.innerHTML = `<div class="roster">${window.GROUPS.map((g) => {
-          const names = people.filter((p) => p.tag === g).sort((a, b) => a.created_at.localeCompare(b.created_at));
-          return `<section class="roster-group glass ${groupClass(g)}"><h3>${esc(g)}<span>${names.length} 人</span></h3>
-            <ul>${names.map((p) => { const fresh = !H.seen.has("p:" + p.name); H.seen.add("p:" + p.name); return `<li style="${fresh ? "" : "animation:none"}">${esc(p.name)}</li>`; }).join("")}</ul></section>`;
-        }).join("")}</div>`;
+      const gs = groupsIn(people);
+      viz.innerHTML = gs.length
+        ? `<div class="roster">${gs.map((g) => {
+            const names = people.filter((p) => p.tag === g).sort((a, b) => a.created_at.localeCompare(b.created_at));
+            return `<section class="roster-group glass ${groupClass(g)}"><h3>${esc(g)}<span>${names.length} 人</span></h3>
+              <ul>${names.map((p) => { const fresh = !H.seen.has("p:" + p.name); H.seen.add("p:" + p.name); return `<li style="${fresh ? "" : "animation:none"}">${esc(p.name)}</li>`; }).join("")}</ul></section>`;
+          }).join("")}</div>`
+        : `<div class="solo glass"><div class="empty">掃右邊的 QR code 報到</div></div>`;
     } else if (q.type === "survey-ai") {
       $("count").innerHTML = "";
       viz.innerHTML = surveyAi(); growBars(viz);
@@ -115,16 +114,57 @@
     } else if (q.type === "wall") {
       $("count").innerHTML = `<b>${new Set(rows.map((r) => r.tag)).size}</b> 組・${rows.length} 則`;
       if (q.hideUntilReveal && !H.state.reveal) {
-        const all = window.GROUPS.map((g) => ({ g, n: rows.filter((r) => r.tag === g).length }));   // 6 組都列出來，還沒送的是 0
+        const all = window.GROUPS.map((g) => ({ g, n: rows.filter((r) => r.tag === g).length })).filter((x) => x.n);
         viz.innerHTML = `<div class="solo glass sealed"><div class="sealed-msg">內容先保密，揭曉時再一起看</div>
-          <div class="sealed-groups">${all.map((x) => `<div class="sealed-g ${groupClass(x.g)}"><b>${x.n}</b><span>${esc(x.g)}</span></div>`).join("")}</div></div>`;
+          ${all.length ? `<div class="sealed-groups">${all.map((x) => `<div class="sealed-g ${groupClass(x.g)}"><b>${x.n}</b><span>${esc(x.g)}</span></div>`).join("")}</div>` : `<div class="empty">等待各組送出</div>`}</div>`;
       } else {
         const list = rows.filter((r) => !H.filter || r.tag === H.filter);
         list.sort((a, b) => H.sort === "likes" ? (b.likes || 0) - (a.likes || 0) || b.created_at.localeCompare(a.created_at) : b.created_at.localeCompare(a.created_at));
         viz.innerHTML = filtersHtml(rows) + (list.length ? `<div class="walls">${list.map(noteHtml).join("")}</div>` : `<div class="empty">還沒有內容</div>`);
       }
     }
+    else if (q.type === "md") {
+      const files = latestByGroup(rows);
+      $("count").innerHTML = `<b>${files.length}</b> 組已上傳`;
+      const fmt = (t) => new Date(t).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit", hour12: false });
+      viz.innerHTML = files.length
+        ? `<div class="md-grid">${files.map((r) => `<button type="button" class="md-card glass ${groupClass(r.tag)}" data-md="${esc(r.tag)}">
+              <span class="tag">${esc(r.tag)}</span>
+              <strong>${esc(mdTitle(r.body) || r.choice || "")}</strong>
+              <span class="hint">${esc(r.choice || "")}・${fmt(r.created_at)}</span>
+            </button>`).join("")}</div>`
+        : `<div class="solo glass"><div class="empty">等待各組上傳 .md 檔</div></div>`;
+      renderMdView(files);
+    }
     renderBar();
+  }
+
+  // 投影單一組的 .md
+  function renderMdView(files) {
+    let box = $("mdView");
+    if (!H.mdOpen || !files.some((r) => r.tag === H.mdOpen)) { if (box) box.remove(); H.mdOpen = files.some((r) => r.tag === H.mdOpen) ? H.mdOpen : null; return; }
+    const i = files.findIndex((r) => r.tag === H.mdOpen), r = files[i];
+    if (!box) { box = document.createElement("div"); box.id = "mdView"; box.className = "md-view"; document.body.appendChild(box); }
+    box.innerHTML = `<div class="md-sheet glass">
+        <div class="md-head"><span class="tag ${groupClass(r.tag)}">${esc(r.tag)}</span><span class="hint">${esc(r.choice || "")}</span>
+          <span class="spacer"></span>
+          <button class="btn small ghost" data-mdnav="-1" ${i ? "" : "disabled"}>◀ 上一組</button>
+          <button class="btn small ghost" data-mdnav="1" ${i < files.length - 1 ? "" : "disabled"}>下一組 ▶</button>
+          <button class="btn small" data-mdclose>關閉</button></div>
+        <div class="md-body big">${renderMd(r.body)}</div></div>`;
+    box.dataset.files = JSON.stringify(files.map((f) => f.tag));
+  }
+  document.addEventListener("click", (e) => {
+    const open = e.target.closest("[data-md]");
+    if (open) { H.mdOpen = open.dataset.md; render(); return; }
+    if (e.target.closest("[data-mdclose]")) { H.mdOpen = null; render(); return; }
+    const nav = e.target.closest("[data-mdnav]");
+    if (nav) { mdStep(+nav.dataset.mdnav); }
+  });
+  function mdStep(d) {
+    const box = $("mdView"); if (!box) return;
+    const tags = JSON.parse(box.dataset.files || "[]"), i = tags.indexOf(H.mdOpen);
+    if (tags[i + d]) { H.mdOpen = tags[i + d]; render(); }
   }
 
   function surveyAi() {
@@ -205,6 +245,12 @@
 
   document.addEventListener("keydown", (e) => {
     if (e.target.matches("input, textarea, select")) return;
+    if (H.mdOpen) {
+      if (e.key === "Escape") { H.mdOpen = null; render(); }
+      if (e.key === "ArrowRight") mdStep(1);
+      if (e.key === "ArrowLeft") mdStep(-1);
+      return;
+    }
     if (e.key === "ArrowRight" && H.unlocked) step(1);
     if (e.key === "ArrowLeft" && H.unlocked) step(-1);
     if (e.key === "f") $("bar").querySelector('[data-act="full"]').click();
@@ -256,7 +302,7 @@
   // ---------- 資料 ----------
   async function applyState() {
     const q = findQuestion(H.state.current_q);
-    if (!H.q || !q || q.id !== H.q.id) { H.q = q; H.rows = []; H.seen.clear(); H.filter = ""; render(); await loadRows(); }
+    if (!H.q || !q || q.id !== H.q.id) { H.q = q; H.rows = []; H.seen.clear(); H.filter = ""; H.mdOpen = null; render(); await loadRows(); }
     else render();
   }
   async function loadState() { try { H.state = await Live.getState(); await applyState(); } catch (err) { console.error(err); $("prompt").textContent = "連不上資料庫，請檢查 config.js"; } }

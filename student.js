@@ -85,12 +85,43 @@
       app.innerHTML = `<form class="card" id="f">${head}
           <div class="field"><label for="t">內容（${esc(S.group)}）</label><textarea class="input" id="t" maxlength="${q.maxLen || 300}" placeholder="${esc(q.placeholder || "")}"></textarea></div>
           <button class="btn" type="submit" id="send">送出</button></form>
-        ${q.hostOnly ? "" : `<section class="wall"><div class="wall-head"><h2 id="listTitle">大家送出的</h2><span class="hint" id="count"></span></div><div class="wall" id="list"></div></section>`}`;
+        <section class="wall"><div class="wall-head"><h2 id="listTitle">大家送出的</h2><span class="hint" id="count"></span></div><div class="wall" id="list"></div></section>`;
       document.getElementById("f").onsubmit = async (e) => {
         e.preventDefault();
         const t = document.getElementById("t"); const v = t.value.trim();
         if (!v) return toast("請先寫內容");
         if (await submit({ body: v })) t.value = "";
+      };
+    }
+    if (q.type === "md") {
+      app.innerHTML = `<form class="card" id="f">${head}
+          <div class="field"><label for="file">選擇 .md 檔（${esc(S.group)}）</label>
+            <input class="input" type="file" id="file" accept=".md,.markdown,.txt,text/markdown,text/plain"></div>
+          <div class="md-preview" id="pv" hidden></div>
+          <button class="btn" type="submit" id="send" disabled>上傳</button></form>
+        <section class="card"><h2 class="sub">你們組目前的版本</h2><div id="mine"></div></section>`;
+      let picked = null;
+      document.getElementById("file").onchange = async (e) => {
+        const f = e.target.files[0]; picked = null;
+        const pv = document.getElementById("pv"), send = document.getElementById("send");
+        pv.hidden = true; send.disabled = true;
+        if (!f) return;
+        if (!/\.(md|markdown|txt)$/i.test(f.name)) return toast("請選擇 .md 檔");
+        if (f.size > 300000) return toast("檔案太大了");
+        const text = await f.text();
+        if (!text.trim()) return toast("檔案是空的");
+        if (text.length > (q.maxChars || 20000)) return toast(`內容太長，請控制在 ${q.maxChars || 20000} 字以內`);
+        picked = { name: f.name.slice(0, 100), text };
+        pv.innerHTML = `<div class="md-file">${esc(picked.name)}</div><div class="md-body">${renderMd(text)}</div>`;
+        pv.hidden = false; send.disabled = false;
+      };
+      document.getElementById("f").onsubmit = async (e) => {
+        e.preventDefault();
+        if (!picked) return toast("請先選擇檔案");
+        if (await submit({ body: picked.text, choice: picked.name })) {
+          picked = null; document.getElementById("file").value = "";
+          document.getElementById("pv").hidden = true; document.getElementById("send").disabled = true;
+        }
       };
     }
     renderData();
@@ -105,6 +136,16 @@
       const mine = rows.filter((r) => r.name === S.name);
       const box = document.getElementById("mine");
       if (box) box.innerHTML = mine.length ? `<span class="label">你送出的：</span>` + mine.map((r) => `<span>${esc(r.body)}</span>`).join("") : "";
+    }
+
+    if (q.type === "md") {
+      const box = document.getElementById("mine"); if (!box) return;
+      const mine = latestByGroup(rows).find((r) => r.tag === S.group);
+      box.innerHTML = mine
+        ? `<div class="md-file">${esc(mine.choice || "未命名.md")}</div>
+           <p class="hint">${esc(mine.name)} 上傳・${new Date(mine.created_at).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit", hour12: false })}</p>
+           <details><summary>看內容</summary><div class="md-body">${renderMd(mine.body)}</div></details>`
+        : `<div class="empty">你們組還沒上傳</div>`;
     }
 
     if (q.type === "wall" && !q.readonly) {
@@ -153,7 +194,7 @@
   }
   async function loadRows() {
     const q = S.q;
-    if (!q || q.type !== "cloud" && q.type !== "wall" || q.readonly) return;
+    if (!q || !["cloud", "wall", "md"].includes(q.type) || q.readonly) return;
     try {
       S.rows = await Live.listResponses(dataKey(q));
       if (q.likes) (await Live.myLikes(S.name)).forEach((id) => S.liked.add(id));
