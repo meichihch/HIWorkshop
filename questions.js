@@ -59,6 +59,13 @@
       title: "第二場｜Ideate → 概念框架 → 展示",
       questions: [
         {
+          id: "w2-word", type: "cloud", title: "今天的幸福",
+          prompt: "用一個詞，形容你今天的幸福",
+          hint: "可以送出好幾個",
+          placeholder: "例如：睡飽、熱豆漿、貓",
+          maxLen: 12,
+        },
+        {
           id: "w2-recap", type: "wall", title: "回顧第一場：HMW",
           prompt: "上次各組的 HMW",
           source: "w1-hmw",        // 顯示第一場 HMW 的資料
